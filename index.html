@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Copilot — AI Credit Calculator</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --accent-glow: rgba(35, 134, 54, 0.25);
+      --blue: #1f6feb;
+      --blue-light: #388bfd;
+      --text: #e6edf3;
+      --text-muted: #7d8590;
+      --text-dim: #484f58;
+      --openai: #10a37f;
+      --anthropic: #d97706;
+      --google: #4285f4;
+      --github: #8b5cf6;
+      --radius: 10px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      max-width: 700px;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .logo-row svg { width: 36px; height: 36px; fill: var(--text); }
+
+    header h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 span { color: var(--accent-hover); }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(35,134,54,0.15);
+      border: 1px solid rgba(35,134,54,0.4);
+      color: #3fb950;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-top: 10px;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Main card ── */
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header .icon {
+      width: 32px; height: 32px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(35,134,54,0.4);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+    }
+
+    .card-header h2 { font-size: 16px; font-weight: 600; }
+    .card-header p  { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+
+    .card-body { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+
+    /* ── Model selector ── */
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+
+    .label-hint { font-weight: 400; color: var(--text-muted); margin-left: 6px; }
+
+    select, input[type="number"], textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+
+    select:focus, input[type="number"]:focus, textarea:focus {
+      border-color: var(--blue-light);
+      box-shadow: 0 0 0 3px rgba(56,139,253,0.15);
+    }
+
+    .select-wrapper { position: relative; }
+
+    .select-wrapper::after {
+      content: '▾';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      font-size: 12px;
+    }
+
+    /* ── Model info banner ── */
+    .model-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .model-info.hidden { display: none; }
+
+    .provider-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .model-info .info-text { flex: 1; color: var(--text-muted); line-height: 1.4; }
+    .model-info .tier-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+
+    /* ── Token grid ── */
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .token-field { display: flex; flex-direction: column; }
+
+    .token-field label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .token-field .dot {
+      width: 8px; height: 8px;
+      border-radius: 2px;
+    }
+
+    .dot-input   { background: #388bfd; }
+    .dot-cached  { background: #8b5cf6; }
+    .dot-cwrite  { background: #f59e0b; }
+    .dot-output  { background: #3fb950; }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* ── Results ── */
+    .results {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .results-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .result-item {
+      padding: 20px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-item:last-child { border-right: none; }
+
+    .result-item .r-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .result-item .r-value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .r-value.credits { color: #f0c000; }
+    .r-value.usd     { color: #3fb950; }
+    .r-value.breakdown { font-size: 13px; color: var(--text-muted); font-weight: 400; line-height: 1.8; }
+
+    .r-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── Cost breakdown ── */
+    .breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .breakdown-table td {
+      padding: 6px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .breakdown-table tr:last-child td { border-bottom: none; }
+    .breakdown-table .td-label { color: var(--text-muted); }
+    .breakdown-table .td-tokens { color: var(--text-dim); text-align: right; }
+    .breakdown-table .td-credits { text-align: right; font-variant-numeric: tabular-nums; }
+    .breakdown-table .td-usd { text-align: right; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    .breakdown-table .row-total td {
+      font-weight: 700;
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+    }
+
+    /* ── Presets ── */
+    .presets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--blue-light);
+      color: var(--blue-light);
+      background: rgba(56,139,253,0.08);
+    }
+
+    /* ── Zero state ── */
+    .zero-state {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .zero-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* ── Footer note ── */
+    .footnote {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footnote a { color: var(--blue-light); text-decoration: none; }
+    .footnote a:hover { text-decoration: underline; }
+
+    /* ── Divider ── */
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Plan selector ── */
+    .plan-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .plan-btn {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+      position: relative;
+    }
+
+    .plan-btn .plan-name  { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .plan-btn .plan-price { font-size: 12px; color: var(--text-muted); margin-bottom: 3px; }
+    .plan-btn .plan-units { font-size: 13px; font-weight: 600; color: #f0c000; }
+
+    .plan-btn:hover {
+      border-color: var(--blue-light);
+      background: rgba(56,139,253,0.06);
+    }
+
+    .plan-btn.active-plan {
+      border-color: var(--accent-hover);
+      background: rgba(35,134,54,0.08);
+    }
+
+    .plan-btn.active-plan .plan-name  { color: #3fb950; }
+    .plan-btn.active-plan .plan-units { color: #3fb950; }
+
+    .plan-check {
+      position: absolute;
+      top: 8px; right: 10px;
+      font-size: 14px;
+      color: #3fb950;
+      display: none;
+    }
+
+    .plan-btn.active-plan .plan-check { display: block; }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%; max-width: 800px;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      transform: translateY(20px); transition: transform 0.2s;
+    }
+    .modal-backdrop.show .modal { transform: translateY(0); }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h3 { font-size: 16px; margin: 0; }
+    .modal-close {
+      background: transparent; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 20px; padding: 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+      padding: 0; overflow-y: auto;
+    }
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .compare-table th, .compare-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    .compare-table th { background: var(--surface2); position: sticky; top: 0; z-index: 10; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+    .compare-table tr:hover { background: rgba(255,255,255,0.02); cursor: pointer; }
+    
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .results-grid { grid-template-columns: 1fr 1fr; }
+      .result-item .r-value { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-row">
+    <!-- GitHub Copilot logo -->
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    <h1>AI Credit <span>Calculator</span></h1>
+  </div>
+  <p>Convert GitHub Copilot token usage into AI Credits and USD cost.<br>Prices per 1M tokens from the official pricing table.</p>
+  <span class="badge">1 AI Credit = $0.01 USD · Usage-Based Billing · June 2026+</span>
+</header>
+
+<div class="card">
+  <div class="card-header">
+    <div class="icon">🧮</div>
+    <div>
+      <h2>Token to Credit Converter</h2>
+      <p>Select a model, enter your token counts, and see the cost instantly.</p>
+    </div>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Plan selector -->
+    <div>
+      <label>Your Copilot seats <span class="label-hint">— enter seat counts to build your monthly AI credit pool</span></label>
+      <div class="plan-row">
+        <label for="seat-business" style="display:block; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0;">
+          <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px;">Business</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">$19 / user / month</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="number" id="seat-business" min="0" value="1" style="width:70px; padding:6px; margin:0;" oninput="calculate()" />
+            <span style="font-size:12px; font-weight:600; color:#f0c000;">seats</span>
+          </div>
+        </label>
+        <label for="seat-enterprise" style="display:block; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:0;">
+          <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px;">Enterprise</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">$39 / user / month</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="number" id="seat-enterprise" min="0" value="0" style="width:70px; padding:6px; margin:0;" oninput="calculate()" />
+            <span style="font-size:12px; font-weight:600; color:#f0c000;">seats</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Model selector -->
+    <div>
+      <label for="model-select">Model <span class="label-hint">— grouped by provider</span></label>
+      <div class="select-wrapper">
+        <select id="model-select" onchange="onModelChange()">
+          <option value="">— Select a model —</option>
+          <optgroup label="OpenAI">
+            <option value="gpt-4.1">GPT-4.1 ★ Included</option>
+            <option value="gpt-5-mini">GPT-5 mini ★ Included</option>
+            <option value="gpt-5.2">GPT-5.2</option>
+            <option value="gpt-5.2-codex">GPT-5.2-Codex</option>
+            <option value="gpt-5.3-codex">GPT-5.3-Codex</option>
+            <option value="gpt-5.4">GPT-5.4</option>
+            <option value="gpt-5.4-mini">GPT-5.4 mini</option>
+            <option value="gpt-5.4-nano">GPT-5.4 nano</option>
+            <option value="gpt-5.5">GPT-5.5</option>
+          </optgroup>
+          <optgroup label="Anthropic">
+            <option value="claude-haiku-4.5">Claude Haiku 4.5</option>
+            <option value="claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="claude-sonnet-4.5">Claude Sonnet 4.5</option>
+            <option value="claude-sonnet-4.6">Claude Sonnet 4.6</option>
+            <option value="claude-opus-4.5">Claude Opus 4.5</option>
+            <option value="claude-opus-4.6">Claude Opus 4.6</option>
+            <option value="claude-opus-4.7">Claude Opus 4.7</option>
+          </optgroup>
+          <optgroup label="Google">
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option value="gemini-3-flash">Gemini 3 Flash</option>
+            <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+          </optgroup>
+          <optgroup label="Fine-tuned (GitHub)">
+            <option value="raptor-mini">Raptor mini</option>
+            <option value="goldeneye">Goldeneye</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+
+    <!-- Model info banner -->
+    <div class="model-info hidden" id="model-info">
+      <div class="provider-dot" id="info-dot"></div>
+      <div class="info-text" id="info-text"></div>
+      <div class="tier-pill" id="info-tier"></div>
+    </div>
+
+    <!-- Quick presets -->
+    <div>
+      <label>Quick presets <span class="label-hint">— fill token fields with common scenarios</span></label>
+      <div class="presets-row">
+        <button class="preset-btn" onclick="applyPreset(1000, 0, 0, 500)">Short chat</button>
+        <button class="preset-btn" onclick="applyPreset(5000, 2000, 0, 2000)">Code review</button>
+        <button class="preset-btn" onclick="applyPreset(20000, 10000, 0, 5000)">Long context</button>
+        <button class="preset-btn" onclick="applyPreset(50000, 30000, 0, 10000)">Agent task</button>
+        <button class="preset-btn" onclick="applyPreset(100000, 50000, 5000, 20000)">Heavy agent</button>
+        <button class="preset-btn" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Token inputs -->
+    <div style="margin-top: 24px;">
+      <label>Token counts <span class="label-hint">— enter your actual token usage</span></label>
+      <div class="token-grid">
+        <div class="token-field">
+          <label for="t-input"><span class="dot dot-input"></span> Input tokens</label>
+          <input type="number" id="t-input" min="0" value="0" placeholder="0" oninput="calculate()" />
+          <span class="field-hint">Tokens sent to the model (prompt + context)</span>
+        </div>
+        <div class="token-field">
+          <label for="t-cached"><span class="dot dot-cached"></span> Cached tokens</label>
+          <input type="number" id="t-cached" min="0" value="0" placeholder="0" oninput="calculate()" />
+          <span class="field-hint">Context reused from cache (lower cost)</span>
+        </div>
+        <div class="token-field" id="field-cwrite" style="display:none">
+          <label for="t-cwrite"><span class="dot dot-cwrite"></span> Cache write tokens</label>
+          <input type="number" id="t-cwrite" min="0" value="0" placeholder="0" oninput="calculate()" />
+          <span class="field-hint">Anthropic only: tokens written to cache</span>
+        </div>
+        <div class="token-field">
+          <label for="t-output"><span class="dot dot-output"></span> Output tokens</label>
+          <input type="number" id="t-output" min="0" value="0" placeholder="0" oninput="calculate()" />
+          <span class="field-hint">Tokens generated by the model (response)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scale to organization -->
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <label>Scale to team / month <span class="label-hint">— project this usage profile</span></label>
+        <button class="preset-btn" style="margin-bottom:6px; background: rgba(31, 111, 235, 0.1); color: var(--blue-light); border-color: rgba(56, 139, 253, 0.4);" onclick="compareModels()">📊 Compare all models</button>
+      </div>
+      <div class="token-grid">
+        <div class="token-field">
+          <label for="m-freq">⚡ Volume multiplier</label>
+          <input type="number" id="m-freq" min="1" value="1" placeholder="1" oninput="calculate()" />
+          <span class="field-hint">e.g. enter 30 to scale daily usage to monthly</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results">
+      <div class="results-header">Estimated Cost</div>
+      <div id="results-body">
+        <div class="zero-state">
+          <div class="icon">🔍</div>
+          Select a model and enter token counts to see the cost.
+        </div>
+      </div>
+      <div class="footnote">
+        All prices are per 1 million tokens. 1 AI Credit = $0.01 USD. Source:
+        <a href="https://docs.github.com/en/copilot/reference/copilot-billing/models-and-pricing" target="_blank">
+          GitHub Copilot Models &amp; Pricing
+        </a>.
+        GPT-4.1 and GPT-5 mini are included models — costs count against your plan allowance first.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Compare Modal -->
+<div class="modal-backdrop" id="compare-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📊 Model Comparison</h3>
+      <button class="modal-close" onclick="closeCompareModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Tier</th>
+            <th style="text-align:right">AI Credits</th>
+            <th style="text-align:right">USD Cost</th>
+          </tr>
+        </thead>
+        <tbody id="compare-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Pricing data (per 1M tokens, in USD) ──
+  // Fields: input, cached, cacheWrite (Anthropic only), output, provider, tier, included, status
+  const MODELS = {
+    // OpenAI
+    "gpt-4.1":       { name: "GPT-4.1",        provider: "openai",    tier: "Versatile",   status: "GA",             included: true,  input: 2.00,  cached: 0.50,   cacheWrite: null, output: 8.00  },
+    "gpt-5-mini":    { name: "GPT-5 mini",      provider: "openai",    tier: "Lightweight", status: "GA",             included: true,  input: 0.25,  cached: 0.025,  cacheWrite: null, output: 2.00  },
+    "gpt-5.2":       { name: "GPT-5.2",         provider: "openai",    tier: "Versatile",   status: "GA",             included: false, input: 1.75,  cached: 0.175,  cacheWrite: null, output: 14.00 },
+    "gpt-5.2-codex": { name: "GPT-5.2-Codex",   provider: "openai",    tier: "Powerful",    status: "GA",             included: false, input: 1.75,  cached: 0.175,  cacheWrite: null, output: 14.00 },
+    "gpt-5.3-codex": { name: "GPT-5.3-Codex",   provider: "openai",    tier: "Powerful",    status: "GA",             included: false, input: 1.75,  cached: 0.175,  cacheWrite: null, output: 14.00 },
+    "gpt-5.4":       { name: "GPT-5.4",         provider: "openai",    tier: "Versatile",   status: "GA",             included: false, input: 2.50,  cached: 0.25,   cacheWrite: null, output: 15.00, note: "Pricing applies to prompts ≤272K tokens" },
+    "gpt-5.4-mini":  { name: "GPT-5.4 mini",    provider: "openai",    tier: "Lightweight", status: "GA",             included: false, input: 0.75,  cached: 0.075,  cacheWrite: null, output: 4.50  },
+    "gpt-5.4-nano":  { name: "GPT-5.4 nano",    provider: "openai",    tier: "Lightweight", status: "GA",             included: false, input: 0.20,  cached: 0.02,   cacheWrite: null, output: 1.25  },
+    "gpt-5.5":       { name: "GPT-5.5",         provider: "openai",    tier: "Powerful",    status: "GA",             included: false, input: 5.00,  cached: 0.50,   cacheWrite: null, output: 30.00 },
+    // Anthropic
+    "claude-haiku-4.5":  { name: "Claude Haiku 4.5",  provider: "anthropic", tier: "Versatile", status: "GA",           included: false, input: 1.00, cached: 0.10, cacheWrite: 1.25, output: 5.00  },
+    "claude-sonnet-4":   { name: "Claude Sonnet 4",   provider: "anthropic", tier: "Versatile", status: "GA",           included: false, input: 3.00, cached: 0.30, cacheWrite: 3.75, output: 15.00 },
+    "claude-sonnet-4.5": { name: "Claude Sonnet 4.5", provider: "anthropic", tier: "Versatile", status: "GA",           included: false, input: 3.00, cached: 0.30, cacheWrite: 3.75, output: 15.00 },
+    "claude-sonnet-4.6": { name: "Claude Sonnet 4.6", provider: "anthropic", tier: "Versatile", status: "GA",           included: false, input: 3.00, cached: 0.30, cacheWrite: 3.75, output: 15.00 },
+    "claude-opus-4.5":   { name: "Claude Opus 4.5",   provider: "anthropic", tier: "Powerful",  status: "GA",           included: false, input: 5.00, cached: 0.50, cacheWrite: 6.25, output: 25.00 },
+    "claude-opus-4.6":   { name: "Claude Opus 4.6",   provider: "anthropic", tier: "Powerful",  status: "GA",           included: false, input: 5.00, cached: 0.50, cacheWrite: 6.25, output: 25.00 },
+    "claude-opus-4.7":   { name: "Claude Opus 4.7",   provider: "anthropic", tier: "Powerful",  status: "GA",           included: false, input: 5.00, cached: 0.50, cacheWrite: 6.25, output: 25.00 },
+    // Google
+    "gemini-2.5-pro":    { name: "Gemini 2.5 Pro",    provider: "google",    tier: "Powerful",    status: "GA",           included: false, input: 1.25, cached: 0.125, cacheWrite: null, output: 10.00, note: "Pricing applies to prompts ≤200K tokens" },
+    "gemini-3-flash":    { name: "Gemini 3 Flash",     provider: "google",    tier: "Lightweight", status: "Public preview",included: false, input: 0.50, cached: 0.05,  cacheWrite: null, output: 3.00  },
+    "gemini-3.1-pro":    { name: "Gemini 3.1 Pro",     provider: "google",    tier: "Powerful",    status: "Public preview",included: false, input: 2.00, cached: 0.20,  cacheWrite: null, output: 12.00, note: "Pricing applies to prompts ≤200K tokens" },
+    "gemini-3.5-flash":  { name: "Gemini 3.5 Flash",   provider: "google",    tier: "Lightweight", status: "GA",           included: false, input: 1.50, cached: 0.15,  cacheWrite: null, output: 9.00  },
+    // Fine-tuned
+    "raptor-mini":  { name: "Raptor mini", provider: "github", tier: "Versatile", status: "Public preview", included: false, input: 0.25, cached: 0.025, cacheWrite: null, output: 2.00, note: "Uses GPT-5 mini pricing" },
+    "goldeneye":    { name: "Goldeneye",   provider: "github", tier: "Powerful",  status: "Public preview", included: false, input: 1.25, cached: 0.125, cacheWrite: null, output: 10.00, note: "Uses GPT-5.1-Codex pricing" },
+  };
+
+  const PROVIDER_COLORS = {
+    openai:    "var(--openai)",
+    anthropic: "var(--anthropic)",
+    google:    "var(--google)",
+    github:    "var(--github)",
+  };
+
+  const PROVIDER_LABELS = {
+    openai:    "OpenAI",
+    anthropic: "Anthropic",
+    google:    "Google",
+    github:    "Fine-tuned (GitHub)",
+  };
+
+  const TIER_STYLES = {
+    "Lightweight": { color: "#3fb950", border: "rgba(63,185,80,0.4)" },
+    "Versatile":   { color: "#388bfd", border: "rgba(56,139,253,0.4)" },
+    "Powerful":    { color: "#f0883e", border: "rgba(240,136,62,0.4)" },
+  };
+
+  const PLANS = {
+    business:   { name: "Business",   price: "$19/user/mo", priceNum: 19, credits: 1900 },
+    enterprise: { name: "Enterprise", price: "$39/user/mo", priceNum: 39, credits: 3900 },
+  };
+
+  let currentModel = null;
+
+  function onModelChange() {
+    const key = document.getElementById("model-select").value;
+    currentModel = key ? MODELS[key] : null;
+
+    const infoEl   = document.getElementById("model-info");
+    const dotEl    = document.getElementById("info-dot");
+    const textEl   = document.getElementById("info-text");
+    const tierEl   = document.getElementById("info-tier");
+    const cwField  = document.getElementById("field-cwrite");
+
+    if (!currentModel) {
+      infoEl.classList.add("hidden");
+      cwField.style.display = "none";
+      showZeroState();
+      return;
+    }
+
+    // Info banner
+    infoEl.classList.remove("hidden");
+    dotEl.style.background = PROVIDER_COLORS[currentModel.provider];
+    const tier = TIER_STYLES[currentModel.tier] || {};
+    tierEl.textContent = currentModel.tier;
+    tierEl.style.color = tier.color || "var(--text-muted)";
+    tierEl.style.borderColor = tier.border || "var(--border)";
+
+    let infoLines = [
+      `<strong>${PROVIDER_LABELS[currentModel.provider]}</strong> · ${currentModel.status}`,
+      `Input $${currentModel.input}/M · Cached $${currentModel.cached}/M · Output $${currentModel.output}/M`,
+    ];
+    if (currentModel.cacheWrite !== null) infoLines.push(`Cache write $${currentModel.cacheWrite}/M`);
+    if (currentModel.included)  infoLines.push("✦ Included model — counts against plan allowance first");
+    if (currentModel.note)      infoLines.push(`⚠ ${currentModel.note}`);
+    textEl.innerHTML = infoLines.join(" &nbsp;·&nbsp; ").replace(" &nbsp;·&nbsp; ✦", "<br>✦").replace(" &nbsp;·&nbsp; ⚠", "<br>⚠");
+
+    // Show/hide cache write field for Anthropic
+    cwField.style.display = currentModel.cacheWrite !== null ? "flex" : "none";
+
+    calculate();
+  }
+
+  function applyPreset(inp, cached, cwrite, out) {
+    document.getElementById("t-input").value  = inp;
+    document.getElementById("t-cached").value = cached;
+    document.getElementById("t-cwrite").value = cwrite;
+    document.getElementById("t-output").value = out;
+    calculate();
+  }
+
+  function clearAll() {
+    applyPreset(0, 0, 0, 0);
+  }
+
+  function val(id) {
+    return Math.max(0, parseFloat(document.getElementById(id).value) || 0);
+  }
+
+  function toCredits(usd) {
+    // 1 credit = $0.01
+    return usd / 0.01;
+  }
+
+  function fmtCredits(n) {
+    if (n === 0) return "0";
+    if (n < 0.001) return n.toExponential(2);
+    if (n < 1)     return n.toFixed(4);
+    if (n < 100)   return n.toFixed(2);
+    return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  function fmtUSD(n) {
+    if (n === 0) return "$0.00";
+    if (n < 0.000001) return "<$0.000001";
+    if (n < 0.01)  return "$" + n.toFixed(6);
+    if (n < 1)     return "$" + n.toFixed(4);
+    return "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  }
+
+  function showZeroState() {
+    document.getElementById("results-body").innerHTML = `
+      <div class="zero-state">
+        <div class="icon">🔍</div>
+        Select a model and enter token counts to see the cost.
+      </div>`;
+  }
+
+  function calculate() {
+    if (!currentModel) { showZeroState(); return; }
+
+    const tInput  = val("t-input");
+    const tCached = val("t-cached");
+    const tCwrite = val("t-cwrite");
+    const tOutput = val("t-output");
+    const totalTokens = tInput + tCached + (currentModel.cacheWrite !== null ? tCwrite : 0) + tOutput;
+
+    if (totalTokens === 0) {
+      document.getElementById("results-body").innerHTML = `
+        <div class="zero-state">
+          <div class="icon">📊</div>
+          Enter token counts to see the estimated cost.
+        </div>`;
+      return;
+    }
+
+    const bizSeats = val("seat-business");
+    const entSeats = val("seat-enterprise");
+    const devs = bizSeats + entSeats || 1;
+    const freq = val("m-freq") || 1;
+    const mult = devs * freq;
+
+    // Cost per token type in USD
+    const M = 1_000_000;
+    const costInput  = (tInput  / M) * currentModel.input * mult;
+    const costCached = (tCached / M) * currentModel.cached * mult;
+    const costCwrite = currentModel.cacheWrite !== null ? (tCwrite / M) * currentModel.cacheWrite * mult : 0;
+    const costOutput = (tOutput / M) * currentModel.output * mult;
+    const totalUSD   = costInput + costCached + costCwrite + costOutput;
+    const totalCreds = toCredits(totalUSD);
+    const multiTokens = totalTokens * mult;
+
+    // Build breakdown rows
+    const rows = [];
+    const addRow = (label, tokens, usd, colorClass, alwaysShow = false) => {
+      if (!alwaysShow && tokens <= 0) return;
+      const dimStyle = tokens <= 0 ? ' style="opacity:0.4"' : '';
+      rows.push(`
+        <tr${dimStyle}>
+          <td class="td-label">${label}</td>
+          <td class="td-tokens">${tokens.toLocaleString()} tokens</td>
+          <td class="td-credits ${colorClass}">${fmtCredits(toCredits(usd))} credits</td>
+          <td class="td-usd">${fmtUSD(usd)}</td>
+        </tr>`);
+    };
+
+    addRow("Input tokens",       tInput * mult,  costInput,  "");
+    addRow("Cached tokens",      tCached * mult, costCached, "");
+    if (currentModel.cacheWrite !== null) addRow("Cache write tokens", tCwrite * mult, costCwrite, "");
+    addRow("Output tokens",      tOutput * mult, costOutput, "", true);  // always shown so users know output exists
+
+    // Credits bar width
+    const planAllowanceBiz = bizSeats * 1900;
+    const planAllowanceEnt = entSeats * 3900;
+    const planAllowance = planAllowanceBiz + planAllowanceEnt;
+
+    const barPct = planAllowance > 0 ? Math.min(100, (totalCreds / planAllowance) * 100) : 100;
+    const barOver = planAllowance > 0 ? totalCreds > planAllowance : true;
+    const remaining = planAllowance > 0 ? planAllowance - totalCreds : 0;
+
+    // Monthly Invoice logic (CFO View)
+    const poolValueUSD = planAllowance * 0.01;
+    const seatCostUSD = (bizSeats * 19) + (entSeats * 39);
+    const overageUSD = Math.max(0, totalUSD - poolValueUSD);
+    const recommendedELB = overageUSD * 1.10;
+    const expectedBill = seatCostUSD + overageUSD;
+
+    let invoiceHtml = '';
+    if (devs > 0) {
+      invoiceHtml = `
+      <div class="section-divider"></div>
+      <div style="padding: 16px;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text); margin-bottom: 12px;">Monthly Invoice Estimate</div>
+        <table class="breakdown-table" style="font-size: 13px;">
+          <tr>
+            <td class="td-label" style="border:none; padding:4px 0;">Seat Licenses (${devs.toLocaleString()} seats)</td>
+            <td class="td-usd" style="border:none; padding:4px 0;">${fmtUSD(seatCostUSD)}</td>
+          </tr>
+          <tr>
+            <td class="td-label" style="border:none; padding:4px 0;">Metered Overage${overageUSD > 0 ? ' &nbsp;<span style="color:#f85149;font-size:11px;">⚠ Pool exceeded</span>' : ' <span style="color:var(--text-dim);font-size:11px;">(0.00 since usage &le; pool)</span>'}</td>
+            <td class="td-usd" style="border:none; padding:4px 0; color:${overageUSD > 0 ? '#f85149' : 'var(--text-muted)'};">${fmtUSD(overageUSD)}</td>
+          </tr>
+          <tr style="border-top: 1px solid var(--border);">
+            <td class="td-label" style="border:none; padding:8px 0; font-weight:600; color:var(--text);">What You Actually Pay</td>
+            <td class="td-usd" style="border:none; padding:8px 0; font-weight:600; color:#3fb950; font-size:16px;">${fmtUSD(expectedBill)}</td>
+          </tr>
+        </table>
+        ${overageUSD > 0 ? `
+        <div style="margin-top: 12px; background: rgba(240, 192, 0, 0.1); border: 1px solid rgba(240, 192, 0, 0.3); padding: 10px; border-radius: 6px; font-size: 12px;">
+          <div style="margin-bottom: 4px;"><strong style="color: #f0c000;">Recommended ELB: ${fmtUSD(recommendedELB)}</strong></div>
+          <span style="color: var(--text-muted);">Set your Enterprise Level Budget cap to this amount in billing settings (includes a 10% safety buffer for variance).</span>
+        </div>` : ''}
+      </div>`;
+    }
+
+    // Cache ROI Savings
+    // Calculate what the cost WOULD have been if the cached tokens were billed at the standard input rate
+    const hypotheticalCostInputForCached = (tCached / M) * currentModel.input * mult;
+    const cacheSavings = hypotheticalCostInputForCached - costCached;
+    
+    let cacheSavingsHtml = '';
+    if (cacheSavings > 0) {
+        cacheSavingsHtml = `
+      <div style="margin-top: 12px; margin-bottom: 4px; padding: 0 16px;">
+        <div style="background: rgba(63, 185, 80, 0.1); border: 1px solid rgba(63, 185, 80, 0.3); padding: 10px; border-radius: 6px; font-size: 12px;">
+          <div style="margin-bottom: 2px;"><strong style="color: #3fb950;">💰 Cache Match Savings: ${fmtUSD(cacheSavings)}</strong></div>
+          <span style="color: var(--text-muted);">Money saved by hitting the cache instead of paying standard input token rates.</span>
+        </div>
+      </div>
+        `
+    }
+
+    document.getElementById("results-body").innerHTML = `
+      <div class="results-grid">
+        <div class="result-item">
+          <div class="r-label">💳 Total AI Credits</div>
+          <div class="r-value credits">${fmtCredits(totalCreds)}</div>
+          <div class="r-sub">@ 1 credit = $0.01</div>
+        </div>
+        <div class="result-item">
+          <div class="r-label">💵 Total USD Cost</div>
+          <div class="r-value usd">${fmtUSD(totalUSD)}</div>
+          <div class="r-sub">${multiTokens.toLocaleString()} tokens total</div>
+        </div>
+      </div>
+      ${cacheSavingsHtml}
+      <div style="padding: 0 16px 14px; margin-top: 10px;">
+        <div style="display:flex; justify-content: space-between; align-items:center; font-size:12px; color: var(--text-muted); margin-bottom: 6px;">
+          <span>Monthly credit usage &nbsp;·&nbsp; <strong style="color: ${barOver ? '#f85149' : '#3fb950'}">Blended Pool (${planAllowance.toLocaleString()} credits)</strong></span>
+          <span style="color: ${barOver ? '#f85149' : 'var(--text-muted)'}; font-variant-numeric: tabular-nums;">
+            ${fmtCredits(totalCreds)} / ${planAllowance.toLocaleString()}
+            ${barOver
+              ? ` &nbsp;<span style="color:#f85149; font-weight:600;">⚠ ${fmtCredits(totalCreds - planAllowance)} over budget</span>`
+              : ` &nbsp;<span style="color:var(--text-dim);">(${fmtCredits(remaining)} remaining)</span>`}
+          </span>
+        </div>
+        <div style="background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; border: 1px solid var(--border);">
+          <div style="height: 100%; width: ${barPct.toFixed(1)}%; background: ${barOver ? 'linear-gradient(90deg, #da3633, #f85149)' : 'linear-gradient(90deg, #238636, #3fb950)'}; border-radius: 4px; transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+      <div class="section-divider"></div>
+      <div style="padding: 8px 4px;">
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <td class="td-label" style="color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Token type</td>
+              <td class="td-tokens" style="color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Count</td>
+              <td class="td-credits" style="color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">AI Credits</td>
+              <td class="td-usd" style="color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">USD</td>
+            </tr>
+          </thead>
+          <tbody>${rows.join("")}</tbody>
+          <tfoot>
+            <tr class="row-total">
+              <td class="td-label">Total</td>
+              <td class="td-tokens">${multiTokens.toLocaleString()}</td>
+              <td class="td-credits" style="color:#f0c000">${fmtCredits(totalCreds)}</td>
+              <td class="td-usd">${fmtUSD(totalUSD)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      ${invoiceHtml}`;
+  }
+
+  function compareModels() {
+    const tInput  = val("t-input");
+    const tCached = val("t-cached");
+    const tCwrite = val("t-cwrite");
+    const tOutput = val("t-output");
+    
+    const bizSeats = val("seat-business");
+    const entSeats = val("seat-enterprise");
+    const devs = bizSeats + entSeats || 1;
+    const freq = val("m-freq") || 1;
+    const mult = devs * freq;
+    const M = 1_000_000;
+
+    const list = [];
+    for (const [key, m] of Object.entries(MODELS)) {
+      const cIn  = (tInput  / M) * m.input * mult;
+      const cCa  = (tCached / M) * m.cached * mult;
+      const cCw  = m.cacheWrite !== null ? (tCwrite / M) * m.cacheWrite * mult : 0;
+      const cOut = (tOutput / M) * m.output * mult;
+      const tUSD = cIn + cCa + cCw + cOut;
+      list.push({ key, name: m.name, tier: m.tier, provider: m.provider, included: m.included, usd: tUSD, creds: toCredits(tUSD) });
+    }
+
+    // Sort cheapest to most expensive
+    list.sort((a, b) => a.usd - b.usd);
+
+    const tbody = document.getElementById("compare-tbody");
+    tbody.innerHTML = list.map(item => `
+      <tr onclick="document.getElementById('model-select').value='${item.key}'; onModelChange(); closeCompareModal();" style="${item.key === document.getElementById('model-select').value ? 'background: rgba(56,139,253,0.1);' : ''}">
+        <td>
+          <div style="font-weight:600; color:var(--text)">${item.name}</div>
+          <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">${item.provider}</div>
+        </td>
+        <td>
+          <span class="tier-pill" style="font-size:10px; color:var(--text-muted); border:1px solid var(--border); padding:2px 6px; border-radius:12px;">${item.tier}</span>
+          ${item.included ? '<span style="color:#3fb950; font-size:10px; margin-left:4px;">★</span>' : ''}
+        </td>
+        <td style="text-align:right; font-variant-numeric: tabular-nums; color:#f0c000;">${fmtCredits(item.creds)}</td>
+        <td style="text-align:right; font-variant-numeric: tabular-nums; color:var(--text-muted);">${fmtUSD(item.usd)}</td>
+      </tr>
+    `).join("");
+
+    document.getElementById("compare-modal").classList.add("show");
+  }
+
+  function closeCompareModal() {
+    document.getElementById("compare-modal").classList.remove("show");
+  }
+
+  // Close modal on click outside
+  document.getElementById("compare-modal").addEventListener("click", e => {
+    if (e.target.id === "compare-modal") closeCompareModal();
+  });
+</script>
+
+</body>
+</html>
