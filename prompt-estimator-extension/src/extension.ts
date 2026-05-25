@@ -44,11 +44,16 @@ function updateEstimation() {
     }
 
     const selection = editor.selection;
-    const text = editor.document.getText(selection);
+    let text = editor.document.getText(selection);
+    
+    // If no text is selected, estimate the entire active file as context
+    if (!text || text.trim() === '') {
+        text = editor.document.getText();
+    }
     
     if (!text || text.trim() === '') {
         statusBarItem.text = `$(sparkle) 0 Tokens / 0.00 AIC`;
-        statusBarItem.tooltip = "Select text to estimate your prompt's usage cost";
+        statusBarItem.tooltip = "Open a file or select text to estimate your prompt's usage cost";
         statusBarItem.show();
         lastTokens = 0;
         lastAIC = 0;
