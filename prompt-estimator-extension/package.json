@@ -2,23 +2,29 @@
   "name": "prompt-cost-estimator",
   "displayName": "Prompt Cost Estimator",
   "description": "Predictive token and AI Credit (AIC) estimator for selected text.",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "publisher": "AkashAi7",
   "repository": {
     "type": "git",
     "url": "https://github.com/AkashAi7/ai-credit-calculator"
   },
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "prompt-cost-estimator.estimate",
+        "name": "estimate",
+        "description": "Estimate tokens and AI cost of a prompt and its attached context",
+        "isSticky": false
+      }
+    ],
     "commands": [
       {
         "command": "prompt-cost-estimator.estimate",

@@ -29,6 +29,46 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(updateEstimation));
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateEstimation));
 
+    // Register Chat Participant
+    const participant = vscode.chat.createChatParticipant('prompt-cost-estimator.estimate', async (request, contextRequest, response, token) => {
+        let totalText = request.prompt;
+        
+        // Add text from attached references (#files, #selection)
+        for (const ref of request.references) {
+            if (typeof ref.value === 'string') {
+                totalText += "\n" + ref.value;
+            } else if (ref.value instanceof vscode.Uri) {
+                try {
+                    const doc = await vscode.workspace.openTextDocument(ref.value);
+                    totalText += "\n" + doc.getText();
+                } catch (e) {
+                    console.error("Could not read reference", e);
+                }
+            } else if (ref.value instanceof vscode.Location) {
+                try {
+                    const doc = await vscode.workspace.openTextDocument(ref.value.uri);
+                    totalText += "\n" + doc.getText(ref.value.range);
+                } catch (e) {
+                    console.error("Could not read location", e);
+                }
+            }
+        }
+
+        const tokens = Math.ceil(totalText.length / 4);
+        
+        const config = vscode.workspace.getConfiguration('promptCostEstimator');
+        const model = config.get<string>('model') || "Claude Haiku 4.5";
+        const pricePerMillion = modelPrices[model] || 1.00;
+        const costUsd = (tokens / 1000000) * pricePerMillion;
+        const aic = costUsd * 100;
+        const aicDisplay = aic < 0.01 ? '<0.01' : aic.toFixed(2);
+
+        response.markdown(`**Tokens:** \`${tokens}\`  \n**Model:** \`${model}\`  \n**Estimated Cost:** \`${aicDisplay} AIC\``);
+    });
+
+    participant.iconPath = new vscode.ThemeIcon('sparkle');
+    context.subscriptions.push(participant);
+
     // Initial update
     updateEstimation();
 }
