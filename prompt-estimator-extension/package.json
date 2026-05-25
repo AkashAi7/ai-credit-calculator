@@ -2,7 +2,7 @@
   "name": "prompt-cost-estimator",
   "displayName": "Prompt Cost Estimator",
   "description": "Predictive token and AI Credit (AIC) estimator for selected text.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "AkashAi7",
   "repository": {
     "type": "git",
@@ -25,6 +25,24 @@
         "isSticky": false
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "prompt-estimator-container",
+          "title": "Prompt Cost Sandbox",
+          "icon": "$(sparkle)"
+        }
+      ]
+    },
+    "views": {
+      "prompt-estimator-container": [
+        {
+          "id": "prompt-estimator.sidebar",
+          "name": "AI Prompt Sandbox",
+          "type": "webview"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "prompt-cost-estimator.estimate",
